@@ -149,6 +149,10 @@ df_full_outer_filled_nulls = df_full_outer_join.fillna(
 df_full_outer_filled_nulls.show()
 
 # 4. Compute total order value per customer.
+df_total_order_value = df_inner_join.groupBy("cust_id", "cust_name").agg(
+    F.sum("order_value").alias("total_order_value")
+)
+df_total_order_value.show()
 
 # Data Types (Structs, Arrays)
 # 1. Create a DataFrame:
