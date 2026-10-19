@@ -18,7 +18,6 @@ spark = DatabricksSession.builder.serverless(True).getOrCreate()
 df = spark.createDataFrame(data, ["name", "department", "salary", "joining_date"])
 
 # 2. Perform the following cleaning:
-from pyspark.sql.functions import trim
 
 # Trim spaces in name and department.
 df_cleaned = df.withColumn("name", F.trim(F.col("name"))).withColumn(
