@@ -162,17 +162,29 @@ data = [
     ("A3", ["grape"]),
 ]
 columns = ["order_id", "items"]
+
+df = spark.createDataFrame(data, columns)
+
 # 2. Perform:
 
 # Add a new item to the array column (append “watermelon”).
+df_with_new_item = df.withColumn(
+    "items", F.array_union(F.col("items"), F.array(F.lit("watermelon")))
+)
 
 # Explode the array to individual rows.
+df_exploded = df_with_new_item.withColumn("item", F.explode(F.col("items")))
 
 # Count how many times each fruit appears.
+df_fruit_count = df_exploded.groupBy("item").agg(F.count("*").alias("count"))
 
 # 3. Create a nested struct column like: withColumn("order_info", struct(col("order_id"), col("items")))
+df_nested = df.withColumn(
+    "order_info", F.struct(F.col("order_id"), F.col("items"))
+).select("order_info")
 
 # 4. Query nested fields.
+df_nested.select("order_info.order_id", "order_info.items").show(truncate=False)
 
 
 # Daily Incremental Load Script
