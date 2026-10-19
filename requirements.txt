@@ -1,0 +1,5 @@
+databricks-connect
+databricks-sdk
+databricks-sql-connector
+numpy==2.5.4
+pyarrow>=4.0.0
