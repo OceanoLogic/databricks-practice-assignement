@@ -88,18 +88,25 @@ data = [
     ("North", "ProductB", 400),
 ]
 columns = ["region", "product", "sales"]
+df = spark.createDataFrame(data, columns)
 
 
 # 2. Calculate:
 
 # Total sales per product.
+df_total_sales = df.groupBy("product").agg(F.sum("sales").alias("total_sales"))
 
 # Average sales per region.
+df_avg_sales = df.groupBy("region").agg(F.sum("sales").alias("avg_sales"))
 
 # Top product per region using window functions.
+windowSpec = Window.partitionBy("region").orderBy(F.desc("sales"))
+df_top_product = df.withColumn("rank", F.rank().over(windowSpec)).alias("top_product")
 
 # 3. Display results.
-
+df_total_sales.show()
+df_avg_sales.show()
+df_top_product.show()
 
 # Dataframe Joins and Enrichment
 
