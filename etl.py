@@ -53,13 +53,15 @@ columns = ["product_id", "product_name", "stock"]
 
 # 2. Write it as a Delta table: inventory.
 df = spark.createDataFrame(data, columns)
-df.write.format("delta").mode("overwrite").save("/tmp/delta/inventory")
-# 3. Perform the following:
+df.write.format("delta").mode("overwrite").saveAsTable("my_delta_table")
+my_delta_table = spark.read.format("delta").table("my_delta_table")
 
+# 3. Perform the following:
 # Update stock of Mango to 120.
 df_updated = df.withColumn(
     "stock", F.when(F.col("product_name") == "Mango", 120).otherwise(F.col("stock"))
 )
+
 # Delete Banana record.
 df_filtered = df_updated.filter(F.col("product_name") != "Banana")
 
@@ -67,10 +69,10 @@ df_filtered = df_updated.filter(F.col("product_name") != "Banana")
 df_inserted = df_filtered.union(spark.createDataFrame([(4, "Orange", 70)], columns))
 
 # 4. Check your version and Restore table to an earlier version.
-df_inserted.write.format("delta").mode("overwrite").save("/tmp/delta/inventory")
-version = df_inserted.selectExpr("MAX(_commit_version) -1 as previous_version").show()
+df_inserted.write.format("delta").saveAsTable("my_delta_table", mode="overwrite")
+spark.sql("DESCRIBE HISTORY my_delta_table").show(truncate=False)
 df_restored = (
-    spark.read.format("delta").option("versionAsOf", 0).load("/tmp/delta/inventory")
+    spark.read.format("delta").option("versionAsOf", 0).table("my_delta_table")
 )
 df_restored.show(truncate=False)
 
