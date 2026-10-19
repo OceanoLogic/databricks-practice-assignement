@@ -117,20 +117,36 @@ orders = [(1, 200), (1, 100), (2, 150), (4, 300)]
 # Columns:
 
 # Customers: cust_id, cust_name
+cols_customers = ["cust_id", "cust_name"]
 
 # Orders: cust_id, order_value
+col_orders = ["cust_id", "order_value"]
+
+df_customers = spark.createDataFrame(customers, cols_customers)
+df_orders = spark.createDataFrame(orders, col_orders)
 
 # 2. Perform:
 
 # Inner join
+df_inner_join = df_customers.join(df_orders, on="cust_id", how="inner")
 
 # Left join
+df_left_join = df_customers.join(df_orders, on="cust_id", how="left")
+
 
 # Full outer join
+df_full_outer_join = df_customers.join(df_orders, on="cust_id", how="outer")
 
 # Anti join (to find customers with no orders)
+df_anti_join = df_customers.join(df_orders, on="cust_id", how="left_anti")
 
 # 3. Handle nulls by filling with “Unknown”.
+df_left_filled_nulls = df_left_join.fillna({"order_value": "Unknown"})
+df_full_outer_join = df_customers.join(df_orders, on="cust_id", how="outer")
+df_full_outer_filled_nulls = df_full_outer_join.fillna(
+    {"cust_name": "Unknown", "order_value": 0}
+)
+df_full_outer_filled_nulls.show()
 
 # 4. Compute total order value per customer.
 
