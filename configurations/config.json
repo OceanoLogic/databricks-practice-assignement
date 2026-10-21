@@ -1,0 +1,23 @@
+{
+    "customers": {
+        "source_path": "/Volumes/main/default/raw/customers/",
+        "target_table": "main.default.customers",
+        "pk": "cust_id",
+        "checkpoint_path": "/Volumes/main/default/_checkpoints/customers",
+        "schema_path": "/Volumes/main/default/_schemas/customers"
+    },
+    "orders": {
+        "source_path": "/Volumes/main/default/raw/orders/",
+        "target_table": "main.default.orders",
+        "pk": "order_id",
+        "checkpoint_path": "/Volumes/main/default/_checkpoints/orders",
+        "schema_path": "/Volumes/main/default/_schemas/orders"
+    },
+    "products": {
+        "source_path": "/Volumes/main/default/raw/products/",
+        "target_table": "main.default.products",
+        "pk": "product_id",
+        "checkpoint_path": "/Volumes/main/default/_checkpoints/products",
+        "schema_path": "/Volumes/main/default/_schemas/products"
+    }
+}
