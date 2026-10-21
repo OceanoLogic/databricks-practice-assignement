@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import pyspark.sql.functions as F
@@ -9,7 +10,21 @@ from pyspark.sql.window import Window
 spark = DatabricksSession.builder.serverless(True).getOrCreate()
 
 generate_example_data(spark)
-LOG_TABLE_PATH = "/Volumes/main/default/raw/_logs/"
+
+
+def load_configuration(config):
+    """Load the configuration paths"""
+    try:
+        with open(config) as f:
+            configuration = json.load(f)
+    except FileNotFoundError:
+        print("Configuration file not found.")
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON: {e}")
+    return configuration
+
+
+config = load_configuration("configurations/config.json")
 
 
 def log_etl_status(spark, table_name, status, rows_loaded=0, error_message=None):
@@ -24,41 +39,35 @@ def log_etl_status(spark, table_name, status, rows_loaded=0, error_message=None)
     log_df = spark.createDataFrame(log_data)
 
     try:
-        if DeltaTable.isDeltaTable(spark, LOG_TABLE_PATH):
+        if DeltaTable.isDeltaTable(spark, config):
             log_df.write.format("delta").mode("append").save(
-                LOG_TABLE_PATH + "/" + table_name
+                config["logs"] + table_name
             )
         else:
             log_df.write.format("delta").mode("overwrite").save(
-                LOG_TABLE_PATH + "/" + table_name
+                config["logs"] + table_name
             )
     except Exception as e:
         print(f"Failed to write audit log for table {table_name}")
 
 
-def load_incremental_data(spark, source_table, target_table):
-
-    source_path = "/Volumes/main/default/raw/"
-    target_path = f"main.default.{target_table}"
+def load_incremental_data(spark, table_name, cfg):
 
     try:
         df = (
             spark.readStream.format("cloudFiles")
             .option("cloudFiles.format", "parquet")
-            .option(
-                "cloudFiles.schemaLocation",
-                f"{source_path}_schemas/{source_table}",
-            )
-            .load(source_path)
+            .option("cloudFiles.schemaLocation", cfg["schema_path"])
+            .load(cfg["source_path"])
         )
     except Exception as e:
-        log_etl_status(spark, source_table, "FAILURE", 0, error_message=str(e))
-        raise RuntimeError(f"Failed to initialize stream for {source_table}: {e}")
+        log_etl_status(spark, table_name, "FAILURE", 0, error_message=str(e))
+        raise RuntimeError(f"Failed to initialize stream for {table_name}: {e}")
 
-    df.writeStream.option(
-        "checkpointLocation",
-        f"{source_path}_checkpoints/{source_table}",
-    ).trigger(availableNow=True).toTable(f"main.default.{target_table}", format="delta")
+    df.writeStream.option("checkpointLocation", cfg["checkpoint_path"]).trigger(
+        availableNow=True
+    ).toTable(f"main.default.{table_name}", format="delta")
 
 
-load_incremental_data(spark, "customers", "customers")
+for name, config in config.items():
+    load_incremental_data(spark, name, config)
