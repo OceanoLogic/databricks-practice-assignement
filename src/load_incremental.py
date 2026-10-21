@@ -25,6 +25,7 @@ def load_configuration(config):
 
 
 config = load_configuration("configurations/config.json")
+LOG_TABLE_PATH = "/Volumes/main/default/_logs/"
 
 
 def log_etl_status(spark, table_name, status, rows_loaded=0, error_message=None):
