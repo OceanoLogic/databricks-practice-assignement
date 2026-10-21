@@ -29,13 +29,15 @@ LOG_TABLE_PATH = "/Volumes/main/default/_logs/"
 
 
 def log_etl_status(spark, table_name, status, rows_loaded=0, error_message=None):
-    log_data = {
-        "table_name": table_name,
-        "execution_time": datetime,
-        "status": status,
-        "rows_loaded": rows_loaded,
-        "error_message": error_message,
-    }
+    log_data = [
+        {
+            "table_name": table_name,
+            "execution_time": datetime.now(),
+            "status": status,
+            "rows_loaded": rows_loaded,
+            "error_message": error_message,
+        }
+    ]
 
     log_df = spark.createDataFrame(log_data)
 
