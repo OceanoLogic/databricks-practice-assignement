@@ -43,13 +43,9 @@ def log_etl_status(spark, table_name, status, rows_loaded=0, error_message=None)
 
     try:
         if DeltaTable.isDeltaTable(spark, config):
-            log_df.write.format("delta").mode("append").save(
-                config["logs"] + table_name
-            )
+            log_df.write.format("delta").mode("append").save(LOG_TABLE_PATH)
         else:
-            log_df.write.format("delta").mode("overwrite").save(
-                config["logs"] + table_name
-            )
+            log_df.write.format("delta").mode("overwrite").save(LOG_TABLE_PATH)
     except Exception as e:
         print(f"Failed to write audit log for table {table_name}")
 
