@@ -43,7 +43,7 @@ def log_etl_status(spark, table_name, status, rows_loaded=0, error_message=None)
     log_df = spark.createDataFrame(log_data)
 
     try:
-        if DeltaTable.isDeltaTable(spark, config):
+        if DeltaTable.isDeltaTable(spark, LOG_TABLE_PATH):
             log_df.write.format("delta").mode("append").save(LOG_TABLE_PATH)
         else:
             log_df.write.format("delta").mode("overwrite").save(LOG_TABLE_PATH)
