@@ -8,7 +8,7 @@ from pyspark.sql.window import Window
 
 from src.generate_data import generate_example_data
 
-spark = DatabricksSession.builder.serverless(True).getOrCreate()
+spark = DatabricksSession.builder.getOrCreate()
 
 generate_example_data(spark)
 
