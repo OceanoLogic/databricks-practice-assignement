@@ -4,8 +4,9 @@ from datetime import datetime
 import pyspark.sql.functions as F
 from databricks.connect import DatabricksSession
 from delta.tables import DeltaTable
-from generate_data import generate_example_data
 from pyspark.sql.window import Window
+
+from src.generate_data import generate_example_data
 
 spark = DatabricksSession.builder.serverless(True).getOrCreate()
 
@@ -63,10 +64,69 @@ def load_incremental_data(spark, table_name, cfg):
         log_etl_status(spark, table_name, "FAILURE", 0, error_message=str(e))
         raise RuntimeError(f"Failed to initialize stream for {table_name}: {e}")
 
-    df.writeStream.option("checkpointLocation", cfg["checkpoint_path"]).trigger(
-        availableNow=True
-    ).toTable(f"main.default.{table_name}", format="delta")
+    def upsert_to_delta(micro_batch_df, batch_id):
+        """Merge incremental data into existing Delta tables"""
+
+        row_count = micro_batch_df.count()
+        if row_count == 0:
+            print(f"Micro-batch {batch_id} for {table_name} is empty. Skipping.")
+            return
+
+        pk = cfg["pk"]
+        target_table = cfg["target_table"]
+
+        try:
+            # Deduplicate micro-batch
+            dedup_batch_df = micro_batch_df.dropDuplicates([pk])
+
+            # Merge or initial load
+            if spark.catalog.tableExists(target_table):
+                delta_target = DeltaTable.forName(spark, target_table)
+                delta_target.alias("target").merge(
+                    dedup_batch_df.alias("source"), f"target.{pk} = source.{pk}"
+                ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+            else:
+                dedup_batch_df.write.format("delta").mode("overwrite").saveAsTable(
+                    target_table
+                )
+
+            # Validation (Row counts & Duplicates)
+            final_df = spark.read.table(target_table)
+            duplicate_count = (
+                final_df.groupBy(pk).count().filter(F.col("count") > 1).count()
+            )
+
+            if duplicate_count > 0:
+                raise ValueError(
+                    f"Validation Failed: Found {duplicate_count} duplicate primary keys"
+                    f" ({pk}) in target table {target_table}!"
+                )
+
+            print(
+                f"Validation Passed for {table_name}. Total rows in target:"
+                f" {final_df.count()}"
+            )
+
+            # Log Success
+            log_etl_status(
+                spark, table_name, "SUCCESS", rows_loaded=dedup_batch_df.count()
+            )
+
+        except Exception as batch_error:
+            print(f"Error processing micro-batch for {table_name}: {batch_error}")
+            log_etl_status(spark, table_name, "FAILURE", error_message=str(batch_error))
+            raise batch_error
+
+    query = (
+        df.writeStream.foreachBatch(upsert_to_delta)
+        .option("checkpointLocation", cfg["checkpoint_path"])
+        .trigger(availableNow=True)
+        .start()
+    )
+
+    query.awaitTermination()
+    print(f"--- Completed Pipeline for: {table_name} ---")
 
 
-for name, config in config.items():
-    load_incremental_data(spark, name, config)
+for name, cfg in config.items():
+    load_incremental_data(spark, name, cfg)
