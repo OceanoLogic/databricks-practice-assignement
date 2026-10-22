@@ -1,5 +1,11 @@
 # DataBricks Practice Assignment
 
+The solution to the tasks `Data Cleaning and Standardization`, `Grouping and Aggregation Challenge`, `Data Types (Structs, Arrays)` are in `src\practice_assignment.py`
+
+The solution to the final task `Daily Incremental Load Script` is in `src\load_incremental.py`
+
+The code in `src\generate_data.py` is used for generating sample data for the `Daily Incremental Load Script` in `src\load_incremental.py`
+
 ## Data Cleaning and Standardization
 
 1. Create a PySpark DataFrame manually with sample data:
